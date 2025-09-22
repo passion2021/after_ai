@@ -40,7 +40,7 @@ db_url = "postgresql://%s:%s@%s:%d/%s" % (
     quote_plus(password),
     "117.72.210.205",
     5433,
-    "mydb"
+    "after_ai"
 )
 engine = create_engine(db_url)
 # 创建表
