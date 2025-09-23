@@ -1,5 +1,8 @@
 from fastapi import APIRouter
 from typing import Literal, List
+
+from openai import OpenAI
+
 from prompt.query import Query
 from loguru import logger
 from pydantic import BaseModel
@@ -42,6 +45,34 @@ class QueryRequest(BaseModel):
     }
 
 
+# 初始化 LLM 客户端（DashScope 兼容 OpenAI 协议）
+client = OpenAI(
+    api_key=os.getenv("DASHSCOPE_API_KEY"),
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+)
+
+
+# ---- 工具函数 ----
+def retrieve_documents(query: str) -> str:
+    """
+    根据用户 query 从向量数据库中检索上下文。
+    返回拼接后的文本内容
+    """
+    if not query:
+        return "未提供检索内容"
+    docs = vector_db.retrieve(query=query)  # 只用 query，不再需要 document_ids
+    return docs or "未找到相关文档"
+
+
+tools = {
+    "retrieve": {
+        "description": "根据用户问题检索相关上下文",
+        "args": ["query"],
+        "func": retrieve_documents,
+    }
+}
+
+
 # 流式返回 AI 结果
 @router.post("/chat", tags=["问答接口"], description="返回文本")
 async def query(request: QueryRequest):
@@ -52,10 +83,7 @@ async def query(request: QueryRequest):
     if not query:
         return ResponseModel(code=400, message="问题不能为空",
                              data={"query": query, "document_ids": document_ids, "model": request.model})
-
-    # 检索相关文档
     doc_content = vector_db.retrieve(document_ids=document_ids, query=query)
-    # 获取身份定义提示词
     system_prompt = '''
      【角色】：你是一位人工售后客服，根据上下文内容回答客户提出的咨询与问题
      【姓名】：小王 
@@ -68,15 +96,10 @@ async def query(request: QueryRequest):
      【适用场景】：商品咨询、物流追踪、售后退换、备注要求、优惠活动说明等
      【行为规范】：严格遵守提示词限制、根据已知信息回答问题
      '''
-    # 生成用户提示词
     user_prompt = Query().format(identity=system_prompt, question=query, context=doc_content)
     with messages:
         messages.append(HumanMsg(content=user_prompt))
-
     ai_response = ""
     for chunk in model.stream(messages.to_json()):  # 流式获取 AI 生成内容
         ai_response += chunk
-
     return ResponseModel(code=200, message="success", data={"answer": ai_response})
-
-

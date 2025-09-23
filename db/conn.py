@@ -29,6 +29,7 @@ class VectorDB:
         results = self.select_db(query_vector, document_ids, top_k)
         # 过滤无效结果
         results = self.post_process(results)
+        logger.info(f"检索结果： \n{json.dumps(results, ensure_ascii=False, indent=4)}")
         return results
 
     def get_document_ids(self, category: str) -> List[int]:
@@ -70,7 +71,6 @@ class VectorDB:
                 }
 
                 retrieve_result.append(data)
-            logger.info(f"检索结果： \n{json.dumps(retrieve_result, ensure_ascii=False, indent=4)}")
             return retrieve_result
 
     @staticmethod
