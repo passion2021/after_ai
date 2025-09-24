@@ -1,8 +1,6 @@
 from fastapi import APIRouter
 from typing import Literal, List
-
 from openai import OpenAI
-
 from prompt.query import Query
 from loguru import logger
 from pydantic import BaseModel

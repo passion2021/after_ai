@@ -81,12 +81,8 @@ class VectorDB:
 
             for document, distance in results:
                 data = {
-                    'id': document.id,
                     'question': document.question,
                     'answer': document.answer,
-                    'category_1': document.category_1,
-                    'category_2': document.category_2,
-                    'point_id': document.point_id,
                     'score': self.distance_to_score(distance)
                 }
 
