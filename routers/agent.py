@@ -8,7 +8,7 @@ from loguru import logger
 from pydantic import BaseModel
 from libs.easy_llm import *
 from db.conn import vector_db
-from schema import ResponseModel
+from schema import BaseResponse
 
 router = APIRouter(
     prefix="/ai",
@@ -81,7 +81,7 @@ async def query(request: QueryRequest):
     query = request.query
     document_ids = request.document_ids
     if not query:
-        return ResponseModel(code=400, message="问题不能为空",
+        return BaseResponse(code=400, message="问题不能为空",
                              data={"query": query, "document_ids": document_ids, "model": request.model})
     doc_content = vector_db.retrieve(document_ids=document_ids, query=query)
     system_prompt = '''
@@ -102,4 +102,4 @@ async def query(request: QueryRequest):
     ai_response = ""
     for chunk in model.stream(messages.to_json()):  # 流式获取 AI 生成内容
         ai_response += chunk
-    return ResponseModel(code=200, message="success", data={"answer": ai_response})
+    return BaseResponse(code=200, message="success", data={"answer": ai_response})

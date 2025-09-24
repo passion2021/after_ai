@@ -3,7 +3,7 @@ import numpy as np
 from sqlmodel import select
 from sqlmodel import Session
 from libs.easy_llm.llm.embed import get_text_embedding
-from orm.schema import engine, QADocument, Document
+from orm.schema import engine, QADocument
 from loguru import logger
 import json
 from utils.common import timing
