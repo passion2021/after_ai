@@ -11,50 +11,67 @@ from utils.common import timing
 
 class VectorDB:
 
-    def retrieve(self, query: str, document_ids: List[int] | None = None, category: str | None = None,
-                 top_k: int = 5) -> List[dict]:
+    def retrieve(self, query: str, kb_id: int, point_id: int | None = None, top_k: int = 5) -> List[dict]:
+        """
+        向量检索QA文档
+        
+        Args:
+            query: 查询文本
+            kb_id: 知识库ID（必填）
+            point_id: 中台ID（非必填）
+            top_k: 返回结果数量
+            
+        Returns:
+            检索结果列表
+        """
         # 文本转向量
         query_vector = self.embedding(query)
-        logger.info(f"retrieve input - document_ids:{document_ids}, category:{category}")
-        if document_ids and not category:  # ✅ 只传 document_ids
-            document_ids = document_ids
-        elif document_ids and category:  # ✅ 两者都传
-            document_ids = list(set(document_ids + self.get_document_ids(category)))
-        elif not document_ids and category:  # ✅ 只传 category
-            document_ids = self.get_document_ids(category)
-        elif not document_ids and not category:  # ✅ 都没传
-            document_ids = [1]  # 默认值
-        logger.info(f"参与查询的文档id：{document_ids}")
+        logger.info(f"retrieve input - kb_id:{kb_id}, point_id:{point_id}, query:{query[:50]}...")
+        
         # 向量检索
-        results = self.select_db(query_vector, document_ids, top_k)
+        results = self.select_db(query_vector, kb_id, point_id, top_k)
         # 过滤无效结果
         results = self.post_process(results)
         logger.info(f"检索结果： \n{json.dumps(results, ensure_ascii=False, indent=4)}")
         return results
 
-    def get_document_ids(self, category: str) -> List[int]:
-        """根据传入的分类，查询出对应的文档id"""
-        with Session(engine) as session:
-            statement = (
-                select(Document.id)
-                .where(Document.category == category, Document.enabled == True)
-            )
-            results = session.exec(statement).all()
-            return results
 
     @staticmethod
     def embedding(text):
         return  get_text_embedding(text)
 
     @timing
-    def select_db(self, query_vector: np.ndarray, document_ids: List[int], top_k: int = 5):
+    def select_db(self, query_vector: np.ndarray, kb_id: int, point_id: int | None = None, top_k: int = 5):
+        """
+        从数据库中进行向量检索
+        
+        Args:
+            query_vector: 查询向量
+            kb_id: 知识库ID
+            point_id: 中台ID（可选）
+            top_k: 返回结果数量
+            
+        Returns:
+            检索结果列表
+        """
         with Session(engine) as session:
+            # 构建查询条件
+            conditions = [
+                QADocument.kb_id == kb_id,
+                QADocument.is_delete == False,
+                QADocument.is_active == True
+            ]
+            
+            # 如果指定了point_id，添加该条件
+            if point_id is not None:
+                conditions.append(QADocument.point_id == point_id)
+            
             stmt = (
                 select(
                     QADocument,
                     QADocument.embedding.l2_distance(query_vector).label("distance")
                 )
-                .where(QADocument.document_id.in_(document_ids))  # 🔹 多个 ID 条件
+                .where(*conditions)
                 .order_by(QADocument.embedding.l2_distance(query_vector))
                 .limit(top_k)
             )
@@ -64,9 +81,12 @@ class VectorDB:
 
             for document, distance in results:
                 data = {
+                    'id': document.id,
                     'question': document.question,
                     'answer': document.answer,
-                    # 'distance': distance,
+                    'category_1': document.category_1,
+                    'category_2': document.category_2,
+                    'point_id': document.point_id,
                     'score': self.distance_to_score(distance)
                 }
 
@@ -93,10 +113,12 @@ class VectorDB:
 
 vector_db = VectorDB()
 if __name__ == '__main__':
-    qa_pairs = [{"question": "这款内衣是什么材质的？安全吗？",
-                 "answer": "我们的内衣采用 A 类婴幼儿标准纯棉面料，无甲醛、无荧光剂，通过国家质检认证，柔软亲肤，对孩子娇嫩肌肤零刺激，家长可放心选购。"},
-                {"question": "内衣会掉色吗？",
-                 "answer": "我们的内衣采用环保活性印染工艺，色牢度达到国家标准，正常洗涤不会出现掉色情况，您可以先单独冷水轻柔洗涤一次，观察有无轻微浮色。"}]
-
-    for qa in qa_pairs:
-        vector_db.retrieve(qa['question'], document_ids=[1, 12])
+    # 测试向量检索
+    test_queries = [
+        "机器人不回复了？",
+    ]
+    
+    for query in test_queries:
+        print(f"\n🔍 测试查询: {query}")
+        results = vector_db.retrieve(query, kb_id=1, top_k=3)
+        print(f"找到 {len(results)} 个相关结果")
