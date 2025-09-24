@@ -1,4 +1,3 @@
-import json
 import os
 from typing import Optional, Any, List
 from dotenv import load_dotenv
@@ -13,34 +12,33 @@ load_dotenv()
 password = os.getenv("POSTGRESQL_PASSWORD")
 
 
-# pip install psycopg2
-class Document(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    name: str
-    category: str
-    enabled: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))
-
-
 class QADocument(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    document_id: int  # 关联 Document 的 id，弱关联，代码层控制
-    question: Optional[str] = None
-    answer: Optional[str] = None
-    # embedding 是 pgvector 的 VECTOR(1024)，这里用 bytes 或 str 占位，具体用法见下
-    embedding: Any = Field(sa_type=Vector(1024))
-    created_at: datetime = Field(default_factory=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))
-    # 新增字段
-    is_delete: bool = Field(default=False, nullable=False, description="逻辑删除标记")
-    category: Optional[str] = Field(default=None, description="行业分类(直接存字符串)")
-    point_id: Optional[int] = Field(default=None, description="中台id")
+    id: Optional[int] = Field(default=None, primary_key=True, description="主键")
+    kb_id: Optional[int] = Field(default=None, description="知识库ID")
+    question: Optional[str] = Field(default=None, description="问题")
+    answer: Optional[str] = Field(default=None, description="答案")
+    category_1: Optional[str] = Field(default=None, description="一级分类")
+    category_2: Optional[str] = Field(default=None, description="二级分类")
+    embedding: Optional[Any] = Field(sa_type=Vector(1024), nullable=True, description="向量")
+    point_id: Optional[int] = Field(default=None, description="中台ID")
+    record_url: Optional[str] = Field(default=None, description="录音文件链接")
+    is_delete: bool = Field(default=False, nullable=False, description="是否删除")
+    is_active: bool = Field(default=True, nullable=False, description="是否启用")
+    created_at: Optional[datetime] = Field(
+        default_factory=lambda: datetime.now(ZoneInfo("Asia/Shanghai")),
+        description="创建时间"
+    )
+    update_at: Optional[datetime] = Field(
+        default_factory=lambda: datetime.now(ZoneInfo("Asia/Shanghai")),
+        description="更新时间"
+    )
 
 db_url = "postgresql://%s:%s@%s:%d/%s" % (
     quote_plus("postgres"),
     quote_plus(password),
-    "117.72.210.205",
-    5433,
-    "after_ai"
+    "36.134.51.155",
+    5432,
+    "lryk",
 )
 engine = create_engine(db_url)
 # 创建表
