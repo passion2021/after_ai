@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from libs.easy_llm import *
 from db.conn import vector_db
 from schema import BaseResponse
+from utils.query_preprocessor import preprocess_query
 
 router = APIRouter(
     prefix="/ai",
@@ -59,16 +60,28 @@ client = OpenAI(
 async def query(request: QueryRequest):
     messages = MsgList(git_mode=False)
     model = set_llm(request.model)
-    query_text = request.query
+    original_query = request.query
     kb_id = request.kb_id
     point_id = request.point_id
 
-    if not query_text:
+    if not original_query:
         return BaseResponse(
             code=400,
             message="问题不能为空",
-            data={"query": query_text, "kb_id": kb_id, "point_id": point_id, "model": request.model}
+            data={"query": original_query, "kb_id": kb_id, "point_id": point_id, "model": request.model}
         )
+    
+    # 预处理查询文本
+    query_text = preprocess_query(original_query)
+    if not query_text:
+        logger.warning(f"查询预处理后无效，原始查询: {original_query}")
+        return BaseResponse(
+            code=400,
+            message="查询内容无效，请重新输入有效问题",
+            data={"query": original_query, "kb_id": kb_id, "point_id": point_id, "model": request.model}
+        )
+    
+    logger.info(f"查询预处理: '{original_query}' -> '{query_text}'")
 
     # 使用新的向量数据库API进行检索
     doc_content = vector_db.retrieve(
@@ -100,7 +113,7 @@ async def query(request: QueryRequest):
     ai_response = ""
     for chunk in model.stream(messages.to_json()):  # 流式获取 AI 生成内容
         ai_response += chunk
-
+    logger.info(f"AI 回答：{ai_response}")
     if '无法回答' in ai_response:
         return BaseResponse(
             code=1024,
