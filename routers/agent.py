@@ -29,6 +29,8 @@ def set_llm(model):
 class QueryRequest(BaseModel):
     kb_id: int
     point_id: int | None = None
+    category_1: str | None = None
+    category_2: str | None = None
     query: str
     model: Literal["qwen-plus"]
     model_config = {
@@ -36,7 +38,9 @@ class QueryRequest(BaseModel):
             "examples": [
                 {
                     "kb_id": 1,
-                    "query": "机器人不回复了，为什么？",
+                    "category_1": "申通",
+                    "category_2": "揽收失败",
+                    "query": "表格揽收失败，提示请使用专用模版",
                     "model": "qwen-plus"
                 },
             ]
@@ -71,6 +75,8 @@ async def query(request: QueryRequest):
         query=query_text,
         kb_id=kb_id,
         point_id=point_id,
+        category_1=request.category_1,
+        category_2=request.category_2,
         top_k=5
     )
     
@@ -102,6 +108,8 @@ async def query(request: QueryRequest):
             "answer": ai_response,
             "kb_id": kb_id,
             "point_id": point_id,
+            "category_1": request.category_1,
+            "category_2": request.category_2,
             "retrieved_docs": len(doc_content)
         }
     )

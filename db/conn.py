@@ -11,7 +11,7 @@ from utils.common import timing
 
 class VectorDB:
 
-    def retrieve(self, query: str, kb_id: int, point_id: int | None = None, top_k: int = 5) -> List[dict]:
+    def retrieve(self, query: str, kb_id: int, point_id: int | None = None, category_1: str | None = None, category_2: str | None = None, top_k: int = 5) -> List[dict]:
         """
         向量检索QA文档
         
@@ -19,6 +19,8 @@ class VectorDB:
             query: 查询文本
             kb_id: 知识库ID（必填）
             point_id: 中台ID（非必填）
+            category_1: 一级分类（非必填）
+            category_2: 二级分类（非必填）
             top_k: 返回结果数量
             
         Returns:
@@ -26,10 +28,10 @@ class VectorDB:
         """
         # 文本转向量
         query_vector = self.embedding(query)
-        logger.info(f"retrieve input - kb_id:{kb_id}, point_id:{point_id}, query:{query[:50]}...")
+        logger.info(f"retrieve input - kb_id:{kb_id}, point_id:{point_id}, category_1:{category_1}, category_2:{category_2}, query:{query[:50]}...")
         
         # 向量检索
-        results = self.select_db(query_vector, kb_id, point_id, top_k)
+        results = self.select_db(query_vector, kb_id, point_id, category_1, category_2, top_k)
         # 过滤无效结果
         results = self.post_process(results)
         logger.info(f"检索结果： \n{json.dumps(results, ensure_ascii=False, indent=4)}")
@@ -41,7 +43,7 @@ class VectorDB:
         return  get_text_embedding(text)
 
     @timing
-    def select_db(self, query_vector: np.ndarray, kb_id: int, point_id: int | None = None, top_k: int = 5):
+    def select_db(self, query_vector: np.ndarray, kb_id: int, point_id: int | None = None, category_1: str | None = None, category_2: str | None = None, top_k: int = 5):
         """
         从数据库中进行向量检索
         
@@ -49,6 +51,8 @@ class VectorDB:
             query_vector: 查询向量
             kb_id: 知识库ID
             point_id: 中台ID（可选）
+            category_1: 一级分类（可选）
+            category_2: 二级分类（可选）
             top_k: 返回结果数量
             
         Returns:
@@ -65,6 +69,14 @@ class VectorDB:
             # 如果指定了point_id，添加该条件
             if point_id is not None:
                 conditions.append(QADocument.point_id == point_id)
+            
+            # 如果指定了category_1，添加该条件
+            if category_1 is not None:
+                conditions.append(QADocument.category_1 == category_1)
+            
+            # 如果指定了category_2，添加该条件
+            if category_2 is not None:
+                conditions.append(QADocument.category_2 == category_2)
             
             stmt = (
                 select(
@@ -83,6 +95,8 @@ class VectorDB:
                 data = {
                     'question': document.question,
                     'answer': document.answer,
+                    'category_1': document.category_1,
+                    'category_2': document.category_2,
                     'score': self.distance_to_score(distance)
                 }
 
