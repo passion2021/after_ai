@@ -55,7 +55,7 @@ def emotion_response(query: str) -> Optional[Dict[str, Any]]:
 
         logger.info(f"情绪识别成功: {emotion_result}")
         if emotion_result.get('text') != 0:
-            return emotion_result
+            return emotion_result.get('text')
         else:
             return None
 
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         "机器人不回复了，为什么？",
         "太生气了！这个系统怎么这么烂！",
         "谢谢你的帮助，很满意",
-        "有点担心这个功能是否正常",
+        "我操 什么时候能给解决",
         "非常高兴能解决这个问题"
     ]
 

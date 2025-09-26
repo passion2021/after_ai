@@ -70,7 +70,7 @@ async def query(request: QueryRequest):
             message="问题不能为空",
             data={"query": original_query, "kb_id": kb_id, "point_id": point_id, "model": request.model}
         )
-    
+
     # 预处理查询文本
     query_text = preprocess_query(original_query)
     if not query_text:
@@ -80,7 +80,7 @@ async def query(request: QueryRequest):
             message="查询内容无效，请重新输入有效问题",
             data={"query": original_query, "kb_id": kb_id, "point_id": point_id, "model": request.model}
         )
-    
+
     # 检查预处理后的文本长度
     if len(query_text.strip()) < 2:
         logger.warning(f"查询文本过短，原始查询: {original_query}, 预处理后: {query_text}")
@@ -89,7 +89,7 @@ async def query(request: QueryRequest):
             message="查询文本过短，请提供更详细的问题描述",
             data={"query": original_query, "kb_id": kb_id, "point_id": point_id, "model": request.model}
         )
-    
+
     logger.info(f"查询预处理: '{original_query}' -> '{query_text}'")
 
     # 使用新的向量数据库API进行检索
@@ -104,11 +104,23 @@ async def query(request: QueryRequest):
     # 知识库检索内容不存在
     if not doc_content:
         logger.info("知识库检索为空")
-        return BaseResponse(
-            code=1024,
-            message="知识库检索为空",
-            data={"query": query_text, "kb_id": kb_id, "point_id": point_id, "model": request.model}
-        )
+        from agent.tools import emotion_response
+        emotion_result = emotion_response(query_text)
+        if emotion_result:
+            return BaseResponse(
+                code=200,
+                message="回复情绪安抚",
+                data={
+                    "answer": emotion_result,
+                    "kb_id": kb_id,
+                }
+            )
+        else:
+            return BaseResponse(
+                code=1024,
+                message="知识库检索为空",
+                data={"query": query_text, "kb_id": kb_id, "point_id": point_id, "model": request.model}
+            )
 
     system_prompt = '''
      【角色】：你是一位人工售后客服，根据上下文内容回答客户提出的咨询与问题
