@@ -81,6 +81,15 @@ async def query(request: QueryRequest):
             data={"query": original_query, "kb_id": kb_id, "point_id": point_id, "model": request.model}
         )
     
+    # 检查预处理后的文本长度
+    if len(query_text.strip()) < 2:
+        logger.warning(f"查询文本过短，原始查询: {original_query}, 预处理后: {query_text}")
+        return BaseResponse(
+            code=1024,
+            message="查询文本过短，请提供更详细的问题描述",
+            data={"query": original_query, "kb_id": kb_id, "point_id": point_id, "model": request.model}
+        )
+    
     logger.info(f"查询预处理: '{original_query}' -> '{query_text}'")
 
     # 使用新的向量数据库API进行检索
@@ -92,6 +101,13 @@ async def query(request: QueryRequest):
         category_2=request.category_2,
         top_k=5
     )
+    if not doc_content:
+        logger.info("知识库检索为空")
+        return BaseResponse(
+            code=1024,
+            message="知识库检索为空",
+            data={"query": query_text, "kb_id": kb_id, "point_id": point_id, "model": request.model}
+        )
 
     system_prompt = '''
      【角色】：你是一位人工售后客服，根据上下文内容回答客户提出的咨询与问题
