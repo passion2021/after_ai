@@ -52,8 +52,6 @@ class QueryPreprocessor:
             return ""
         
         original_query = query
-        logger.info(f"原始查询: {original_query}")
-        
         # 1. 去除@符号及其后面的用户名
         query = self._remove_mentions(query)
         
@@ -71,8 +69,6 @@ class QueryPreprocessor:
         
         # 6. 最终清理
         query = query.strip()
-        
-        logger.info(f"清理后查询: {query}")
         
         return query
     

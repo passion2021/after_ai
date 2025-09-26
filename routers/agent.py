@@ -101,6 +101,7 @@ async def query(request: QueryRequest):
         category_2=request.category_2,
         top_k=5
     )
+    # 知识库检索内容不存在
     if not doc_content:
         logger.info("知识库检索为空")
         return BaseResponse(
