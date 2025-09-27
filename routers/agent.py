@@ -8,7 +8,7 @@ from libs.easy_llm import *
 from db.conn import vector_db
 from schema import BaseResponse
 from utils.query_preprocessor import preprocess_query
-
+from agent.tools import emotion_response
 router = APIRouter(
     prefix="/ai",
 )  # 定义请求体
@@ -63,7 +63,7 @@ async def query(request: QueryRequest):
     original_query = request.query
     kb_id = request.kb_id
     point_id = request.point_id
-
+    logger.info(f"上游参数: {request.model_dump()}"   )
     if not original_query:
         return BaseResponse(
             code=400,
@@ -104,7 +104,7 @@ async def query(request: QueryRequest):
     # 知识库检索内容不存在
     if not doc_content:
         logger.info("知识库检索为空")
-        from agent.tools import emotion_response
+
         emotion_result = emotion_response(query_text)
         if emotion_result:
             return BaseResponse(
