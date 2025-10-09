@@ -104,23 +104,23 @@ async def query(request: QueryRequest):
     # 知识库检索内容不存在
     if not doc_content:
         logger.info("知识库检索为空")
-
-        emotion_result = emotion_response(query_text)
-        if emotion_result:
-            return BaseResponse(
-                code=200,
-                message="回复情绪安抚",
-                data={
-                    "answer": emotion_result,
-                    "kb_id": kb_id,
-                }
-            )
-        else:
-            return BaseResponse(
-                code=1024,
-                message="知识库检索为空",
-                data={"query": query_text, "kb_id": kb_id, "point_id": point_id, "model": request.model}
-            )
+        # 情绪安抚
+        # emotion_result = emotion_response(query_text)
+        # if emotion_result:
+        #     return BaseResponse(
+        #         code=200,
+        #         message="回复情绪安抚",
+        #         data={
+        #             "answer": emotion_result,
+        #             "kb_id": kb_id,
+        #         }
+        #     )
+        # else:
+        return BaseResponse(
+            code=1024,
+            message="知识库检索为空",
+            data={"query": query_text, "kb_id": kb_id, "point_id": point_id, "model": request.model}
+        )
 
     system_prompt = '''
      【角色】：你是一位人工售后客服，根据上下文内容回答客户提出的咨询与问题

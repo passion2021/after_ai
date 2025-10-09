@@ -118,7 +118,7 @@ class VectorDB:
 
     @staticmethod
     def post_process(retrieve_result):
-        return [item for item in retrieve_result if item['score'] > 0.3]
+        return [item for item in retrieve_result if item['score'] > 0.5]
 
 
 vector_db = VectorDB()
